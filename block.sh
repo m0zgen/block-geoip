@@ -21,6 +21,7 @@ STATUS="$(systemctl is-active firewalld.service)"
 function start_firewall() {
     systemctl start firewalld  > /dev/null 2> /dev/null
     systemctl enable firewalld  > /dev/null 2> /dev/null
+    echo -e "Ok, firewalld installed and started. Please script again."
 }
 
 # Checking is firewalld is running
@@ -37,7 +38,7 @@ else
             echo Ok bye bye!
             exit 1
         else
-            echo Trying start firewalld...
+            echo -e "\nTrying start firewalld..."
             start_firewall
         fi
     else
