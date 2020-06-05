@@ -49,7 +49,7 @@ else
             exit 1
         else
             if [ $(which yum) ]; then
-                echo -e "[\e[32mOK\e[39m] Detected a RHEL based environment!"
+                echo -e "\n[\e[32mOK\e[39m] Detected a RHEL based environment!"
                 echo -e "[\e[93mDOING\e[39m] Making sure firewalld is installed..."
                 yum -y install firewalld > /dev/null 2> /dev/null
                 if [[ $? -eq 0 ]];then
@@ -60,7 +60,7 @@ else
                     exit 1
                 fi
             elif [ $(which apt) ]; then
-                echo -e "[\e[32mOK\e[39m] Detected a Debian based environment!"
+                echo -e "\n[\e[32mOK\e[39m] Detected a Debian based environment!"
                 echo -e "[\e[93mDOING\e[39m] Making sure firewalld is installed..."
                 apt -y install firewalld > /dev/null 2> /dev/null
                 if [[ $? -eq 0 ]];then
