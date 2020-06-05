@@ -10,3 +10,7 @@ This script blocking countries from ipdeny *.zones lists. You can set ipset name
 ### Excludes
 
 Open script and set "IGNORE_COUNTRIES" variable
+
+### Thanks
+
+* https://gist.github.com/Pandry/
