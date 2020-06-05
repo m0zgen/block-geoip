@@ -69,7 +69,7 @@ for i in $IGNORE_COUNTRIES; do
 done
 
 # Debug clean
-if [[ $DEBUG ]]; then
+if ( $DEBUG ); then
     rm -rf $TMPDIR/[a-w]*.zone
 fi
 
