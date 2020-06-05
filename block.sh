@@ -18,11 +18,61 @@ STATUS="$(systemctl is-active firewalld.service)"
 # Processing
 # ---------------------------------------------------\
 
+function start_firewall() {
+    systemctl start firewalld  > /dev/null 2> /dev/null
+    systemctl enable firewalld  > /dev/null 2> /dev/null
+}
+
 # Checking is firewalld is running
 if [ "${STATUS}" = "active" ]; then
     echo -e "[\e[32mOK\e[39m] Firewalld is running!..."
 else 
-    echo -e "[\e[31mFAIL\e[39m] Firewalld does not running, aborting!" 
+    echo -e "[\e[31mFAIL\e[39m] Firewalld does not running..." 
+
+    if [[ -f /usr/sbin/firewalld ]]; then
+        echo Firewalld installed! But not is running
+        read -p "Start and enable firewalld? " -n 1 -r
+        if [[ ! $REPLY =~ ^[Yy]$ ]]
+        then
+            echo Ok bye bye!
+            exit 1
+        else
+            echo Trying start firewalld...
+            start_firewall
+        fi
+    else
+        echo Firewalld does not found
+        read -p "Install firewalld? " -n 1 -r
+        if [[ ! $REPLY =~ ^[Yy]$ ]]
+        then
+            echo Ok bye bye!
+            exit 1
+        else
+            if [ $(which yum) ]; then
+                echo -e "[\e[32mOK\e[39m] Detected a RHEL based environment!"
+                echo -e "[\e[93mDOING\e[39m] Making sure firewalld is installed..."
+                yum -y install firewalld > /dev/null 2> /dev/null
+                if [[ $? -eq 0 ]];then
+                    echo -e "[\e[32mOK\e[39m] firewalld is installed!"
+                    start_firewall
+                else
+                    echo -e "[\e[31mFAIL\e[39m] Couldn't install firewalld, aborting!"
+                    exit 1
+                fi
+            elif [ $(which apt) ]; then
+                echo -e "[\e[32mOK\e[39m] Detected a Debian based environment!"
+                echo -e "[\e[93mDOING\e[39m] Making sure firewalld is installed..."
+                apt -y install firewalld > /dev/null 2> /dev/null
+                if [[ $? -eq 0 ]];then
+                    echo -e "[\e[32mOK\e[39m] firewalld is installed!"
+                    start_firewall
+                else
+                    echo -e "[\e[31mFAIL\e[39m] Couldn't install firewalld, aborting!"
+                    exit 1
+                fi
+            fi
+        fi
+    fi
     exit 1  
 fi
 
