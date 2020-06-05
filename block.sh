@@ -1,45 +1,26 @@
 #!/bin/bash
+# Cretaed by Yevgeniy Gonvharov, https://sys-adm.in
+# Block countries with ipset + firewalld script
 
-##
-# Name: GeoIP Firewall script
-# Author: Pandry
-# Version: 0.1
-# Description: This is a simple script that will set up a GeoIP firewall blocking all the zones excecpt the specified ones
-#                it is possible to add the whitelisted zones @ line 47
-# Additional notes: Usage of [iprange](https://github.com/firehol/iprange) is suggested
-#                     for best performances
-##
+# Envs
+# ---------------------------------------------------\
+PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+SCRIPT_PATH=$(cd `dirname "${BASH_SOURCE[0]}"` && pwd)
 
+# Vars
+# ---------------------------------------------------\
 IGNORE_COUNTRIES="ru pl kz de fr"
 BLACKLIST_NAME="geoblacklist"
 TMPDIR="/tmp/geoip"
 DEBUG=true
+STATUS="$(systemctl is-active firewalld.service)"
 
 
-if [ $(which yum) ]; then
-	echo -e "[\e[32mOK\e[39m] Detected a RHEL based environment!"
-    echo -e "[\e[93mDOING\e[39m] Making sure firewalld is installed..."
-    yum -y install firewalld > /dev/null 2> /dev/null
-    if [[ $? -eq 0 ]];then
-        echo -e "[\e[32mOK\e[39m] firewalld is installed!"
-        systemctl start firewalld  > /dev/null 2> /dev/null
-        systemctl enable firewalld  > /dev/null 2> /dev/null
-    else
-        echo -e "[\e[31mFAIL\e[39m] Couldn't install firewalld, aborting!"
-        exit 1
-    fi
-elif [ $(which apt) ]; then
-	echo -e "[\e[32mOK\e[39m] Detected a Debian based environment!"
-    echo -e "[\e[93mDOING\e[39m] Making sure firewalld is installed..."
-    apt -y install firewalld > /dev/null 2> /dev/null
-    if [[ $? -eq 0 ]];then
-        echo -e "[\e[32mOK\e[39m] firewalld is installed!"
-        systemctl start firewalld  > /dev/null 2> /dev/null
-        systemctl enable firewalld > /dev/null 2> /dev/null
-    else
-        echo -e "[\e[31mFAIL\e[39m] Couldn't install firewalld, aborting!"
-        exit 1
-    fi
+if [ "${STATUS}" = "active" ]; then
+    echo -e "[\e[32mOK\e[39m] Firewalld is running!..."
+else 
+    echo -e "[\e[31mFAIL\e[39m] Firewalld does not running, aborting!" 
+    exit 1  
 fi
 
 # Remove ipset
@@ -51,7 +32,7 @@ fi
 #200k should be enough - $(find . -name "*.zone" | xargs wc -l) gives 184688 lines without the it zone
 firewall-cmd --get-ipsets| grep "$BLACKLIST_NAME" > /dev/null 2> /dev/null 
 if [[ $? -ne 0 ]];then
-        echo -e "[\e[93mDOING\e[39m] Creating "
+        echo -e "[\e[93mi\e[39m] Creating new ipset $BLACKLIST_NAME in the Firewall... "
         firewall-cmd --permanent --new-ipset="$BLACKLIST_NAME" --type=hash:net --option=family=inet --option=hashsize=4096 --option=maxelem=200000 > /dev/null 2> /dev/null 
     if [[ $? -eq 0 ]];then
         echo -e "[\e[32mOK\e[39m] Blacklist $BLACKLIST_NAME successfully created!"
@@ -61,14 +42,14 @@ if [[ $? -ne 0 ]];then
     fi
 fi
 
-#create the folder
+# Create temporary folder
 mkdir -p $TMPDIR
 
-#Downloads the GeoIP database
+# Downloads the GeoIP database
 if [[ $? -eq 0 ]];then
-    echo -e "[\e[93mDOING\e[39m] Downloading latest ip database... "
-    # wget http://www.ipdeny.com/ipblocks/data/countries/all-zones.tar.gz > /dev/null 2> /dev/null
-	   wget --no-check-certificate http://www.ipdeny.com/ipblocks/data/countries/all-zones.tar.gz -O $TMPDIR/geoip.tar.gz
+    echo -e "[\e[93mi\e[39m] Downloading latest ip database... "
+       # wget http://www.ipdeny.com/ipblocks/data/countries/all-zones.tar.gz > /dev/null 2> /dev/null
+	   wget -q --no-check-certificate http://www.ipdeny.com/ipblocks/data/countries/all-zones.tar.gz -O $TMPDIR/geoip.tar.gz > /dev/null 2> /dev/null
     if [[ $? -eq 0 ]];then
         echo -e "[\e[32mOK\e[39m] Database successfully downloaded!"
     else
@@ -80,11 +61,10 @@ else
     exit 1
 fi
 
-#Extract the zones in the database
+# Extract zones in to the temporary folder
 tar -xzf $TMPDIR/geoip.tar.gz -C $TMPDIR
 
-#Remove all the zones you want to blacklist
-
+# Remove all excluded zones
 for i in $IGNORE_COUNTRIES; do
     rm $TMPDIR/$i.zone
     echo -e "Remove $TMPDIR/$i.zone"
@@ -97,7 +77,7 @@ fi
 
 #Add the IPs to the blacklist
 for f in $TMPDIR/*.zone; do
-    echo -e "[\e[93mDOING\e[39m] Adding lines from $f ..."
+    echo -e "[\e[93mi\e[39m] Adding lines from $f ..."
     firewall-cmd --permanent --ipset="$BLACKLIST_NAME" --add-entries-from-file=$f > /dev/null
     if [[ $? -eq 0 ]];then
         echo -e "[\e[32mOK\e[39m] Added $f with no issues";
@@ -107,12 +87,22 @@ for f in $TMPDIR/*.zone; do
     echo ""
 done
 
-# # Drop the IPs
-firewall-cmd --permanent --zone=drop --add-source="ipset:$BLACKLIST_NAME" > /dev/null
+# Drop the IPs
 
-# #Reload the firewall
-firewall-cmd --reload
+STAT=$(firewall-cmd --list-all --zone=drop | grep "$BLACKLIST_NAME")
+if [[ ! -z $STAT ]];then
+    echo -e "[\e[32mOK\e[39m] Drop zone $BLACKLIST_NAME is exist"
+else
+    echo -e "[\e[93mi\e[39m] Adding source $BLACKLIST_NAME to DROP zone... "
+    firewall-cmd --permanent --zone=drop --add-source="ipset:$BLACKLIST_NAME" > /dev/null
+fi
+
+# Reload the firewall
+echo -e "[\e[93mi\e[39m] Reload firewalld... "
+firewall-cmd --reload > /dev/null
 
 # cd ~
 # Remove the traces
 rm -rf $TMPDIR
+
+echo -e "DONE!"
