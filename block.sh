@@ -12,7 +12,7 @@ SCRIPT_PATH=$(cd `dirname "${BASH_SOURCE[0]}"` && pwd)
 IGNORE_COUNTRIES="ru pl kz de fr"
 BLACKLIST_NAME="geoblacklist"
 TMPDIR="/tmp/geoip"
-DEBUG=true
+DEBUG=false
 STATUS="$(systemctl is-active firewalld.service)"
 
 # Processing
