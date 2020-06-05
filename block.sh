@@ -15,7 +15,10 @@ TMPDIR="/tmp/geoip"
 DEBUG=true
 STATUS="$(systemctl is-active firewalld.service)"
 
+# Processing
+# ---------------------------------------------------\
 
+# Checking is firewalld is running
 if [ "${STATUS}" = "active" ]; then
     echo -e "[\e[32mOK\e[39m] Firewalld is running!..."
 else 
@@ -23,13 +26,8 @@ else
     exit 1  
 fi
 
-# Remove ipset
-# firewall-cmd --permanent --zone=drop --remove-source="ipset:$BLACKLIST_NAME"
-# firewall-cmd --permanent --delete-ipset=$BLACKLIST_NAME
-# firewall-cmd --reload
-
-#Create the blacklist (only if necessary)
-#200k should be enough - $(find . -name "*.zone" | xargs wc -l) gives 184688 lines without the it zone
+# Create the blacklist (only if necessary)
+# 200k should be enough - $(find . -name "*.zone" | xargs wc -l) gives 184688 lines without the it zone
 firewall-cmd --get-ipsets| grep "$BLACKLIST_NAME" > /dev/null 2> /dev/null 
 if [[ $? -ne 0 ]];then
         echo -e "[\e[93mi\e[39m] Creating new ipset $BLACKLIST_NAME in the Firewall... "
@@ -75,16 +73,15 @@ if [[ $DEBUG ]]; then
     rm -rf $TMPDIR/[a-w]*.zone
 fi
 
-#Add the IPs to the blacklist
+# Add the IPs to the blacklist
 for f in $TMPDIR/*.zone; do
-    echo -e "[\e[93mi\e[39m] Adding lines from $f ..."
+    echo -e "[\e[93mi\e[39m] Adding $f ..."
     firewall-cmd --permanent --ipset="$BLACKLIST_NAME" --add-entries-from-file=$f > /dev/null
     if [[ $? -eq 0 ]];then
         echo -e "[\e[32mOK\e[39m] Added $f with no issues";
     else
         echo -e "[\e[31mFAIL\e[39m] Some errors verified while adding the $f zone";
     fi
-    echo ""
 done
 
 # Drop the IPs
@@ -105,4 +102,5 @@ firewall-cmd --reload > /dev/null
 # Remove the traces
 rm -rf $TMPDIR
 
+echo ""
 echo -e "DONE!"
