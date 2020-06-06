@@ -15,6 +15,6 @@ BLACKLIST_NAME="geoblacklist"
 # ---------------------------------------------------\
 
 # Remove ipset
-irewall-cmd --permanent --zone=drop --remove-source="ipset:$BLACKLIST_NAME"
+firewall-cmd --permanent --zone=drop --remove-source="ipset:$BLACKLIST_NAME"
 firewall-cmd --permanent --delete-ipset=$BLACKLIST_NAME
 firewall-cmd --reload

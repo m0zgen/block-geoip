@@ -21,10 +21,10 @@ STATUS="$(systemctl is-active firewalld.service)"
 function start_firewall() {
     systemctl start firewalld  > /dev/null 2> /dev/null
     systemctl enable firewalld  > /dev/null 2> /dev/null
-    echo -e "Ok, firewalld installed and started. Please script again."
+    echo -e "Ok, firewalld installed and started. Please run script again."
 }
 
-# Checking is firewalld is running
+# Checking is firewalld is running / installed
 if [ "${STATUS}" = "active" ]; then
     echo -e "[\e[32mOK\e[39m] Firewalld is running!..."
 else 
@@ -35,7 +35,7 @@ else
         read -p "Start and enable firewalld? " -n 1 -r
         if [[ ! $REPLY =~ ^[Yy]$ ]]
         then
-            echo Ok bye bye!
+            echo -e "\nOk bye bye!"
             exit 1
         else
             echo -e "\nTrying start firewalld..."
@@ -46,7 +46,7 @@ else
         read -p "Install firewalld? " -n 1 -r
         if [[ ! $REPLY =~ ^[Yy]$ ]]
         then
-            echo Ok bye bye!
+            echo -e "\nOk bye bye!"
             exit 1
         else
             if [ $(which yum) ]; then
